@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import requests
 
 st.title("Weighsight")
 # populate this via Google Calendar
-dates = [
+formatted_dates = [
     "2025-01-01", "2025-01-08", "2025-01-15", "2025-01-22",
     "2025-01-29", "2025-02-05", "2025-02-12", "2025-02-19",
     "2025-02-26", "2025-03-05", "2025-03-12", "2025-03-19",
@@ -13,7 +12,7 @@ dates = [
     "2025-04-23", "2025-04-30", "2025-05-07"
 ]
 # populate this via Google Calendar
-weights = [
+formatted_weights = [
     "120 lbs", "125 lbs", "120 lbs", "135 lbs",
     "130 lbs", "128 lbs", "126 lbs", "129 lbs",
     "127 lbs", "124 lbs", "123 lbs", "122 lbs",
@@ -22,17 +21,16 @@ weights = [
 ]
 
 data = pd.DataFrame({
-    "date": dates,
-    "weight": weights,
-    "week": [f"Week {i+1}" for i in range(len(dates))]
+    "date": formatted_dates,
+    "weight": formatted_weights,
+    "week": [f"Week {i+1}" for i in range(len(formatted_dates))]
 })
 
 trace = go.Scatter(
     x=data["week"],
     y=data["weight"],
-    mode="lines+markers",
-    line=dict(color="#00ff00", width=3, shape="spline"),
-    marker=dict(color="#00ff00", size=6),
+    mode="lines",
+    line=dict(color="#00ff00", width=3, shape="spline"),    
     fill="tozeroy",
     fillcolor="rgba(30, 215, 96, 0.15)",
     hovertemplate="<b>Date:</b> %{customdata|%b %d, %Y}<br><b>Weight:</b> %{y}<extra></extra>",
@@ -60,3 +58,41 @@ fig.update_layout(
 # st.write(st.user)
 st.plotly_chart(fig, use_container_width=True)
 # st.write(data)
+
+# find min & max weights along with the date
+min_weight, max_weight = 1000, -1
+min_date, max_date = "", ""
+min_week, max_week = -1, -1
+
+for index, weight in enumerate(formatted_weights):
+    weight = float(weight.replace("lbs", "").replace("kg", "").strip())        
+    
+    if weight < min_weight:
+        min_weight = weight
+        min_date = formatted_dates[index]
+        min_week = index
+
+    if weight > max_weight:
+        max_weight = weight
+        max_date = formatted_dates[index]
+        max_week = index
+
+st.write(f"Overall, you weighed at most {max_weight} lbs (week {max_week + 1}) and at minimum {min_weight} lbs (week {min_week + 1}).")
+
+# month with most weight gain
+
+# month with least weight gain
+
+# month with most weight loss
+
+# month with least weight loss
+
+# overall average weight gain rate
+
+# overall average weight loss rate 
+
+# month-by-month average weight gain rate 
+
+# month-by-month average weight loss rate 
+
+# feed this data into CGPT with a propmpt to get concise analysis
