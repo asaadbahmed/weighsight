@@ -12,14 +12,15 @@ data = pd.DataFrame({
 })
 
 trace = go.Scatter(
-    x=data["date"],
+    x=data["week"],
     y=data["weight"],
     mode="lines+markers",
     line=dict(color="#00ff00", width=3, shape="spline"),
     marker=dict(color="#00ff00", size=6),
     fill="tozeroy",
     fillcolor="rgba(30, 215, 96, 0.15)",
-    hovertemplate="<b>Date:</b> %{x|%b %d, %Y}<br><b>Weight:</b> %{y}<extra></extra>"
+    hovertemplate="<b>Date:</b> %{customdata|%b %d, %Y}<br><b>Weight:</b> %{y}<extra></extra>",
+    customdata=data["date"]
 )
 
 fig = go.Figure(data=[trace])
@@ -40,5 +41,6 @@ fig.update_layout(
 
 st.button("Connect your Google account", on_click=st.login)
 st.button("Logout", on_click=st.logout)
+st.write(st.user)
 st.plotly_chart(fig, use_container_width=True)
 st.write(data)
