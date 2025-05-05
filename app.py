@@ -1,10 +1,26 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import requests
 
 st.title("Weighsight")
-dates = ["2025-01-01", "2025-01-08", "2025-01-15", "2025-01-22"] # populate this via Google Calendar
-weights = ["120 lbs", "125 lbs", "120 lbs", "135 lbs"] # populate this via Google Calendar
+# populate this via Google Calendar
+dates = [
+    "2025-01-01", "2025-01-08", "2025-01-15", "2025-01-22",
+    "2025-01-29", "2025-02-05", "2025-02-12", "2025-02-19",
+    "2025-02-26", "2025-03-05", "2025-03-12", "2025-03-19",
+    "2025-03-26", "2025-04-02", "2025-04-09", "2025-04-16",
+    "2025-04-23", "2025-04-30", "2025-05-07"
+]
+# populate this via Google Calendar
+weights = [
+    "120 lbs", "125 lbs", "120 lbs", "135 lbs",
+    "130 lbs", "128 lbs", "126 lbs", "129 lbs",
+    "127 lbs", "124 lbs", "123 lbs", "122 lbs",
+    "125 lbs", "121 lbs", "120 lbs", "119 lbs",
+    "118 lbs", "117 lbs", "116 lbs"
+]
+
 data = pd.DataFrame({
     "date": dates,
     "weight": weights,
@@ -39,8 +55,8 @@ fig.update_layout(
     margin=dict(t=60, b=40, l=60, r=40)
 )
 
-st.button("Connect your Google account", on_click=st.login)
-st.button("Logout", on_click=st.logout)
-st.write(st.user)
+# st.button("Connect your Google account", on_click=st.login)
+# st.button("Logout", on_click=st.logout)
+# st.write(st.user)
 st.plotly_chart(fig, use_container_width=True)
-st.write(data)
+# st.write(data)
