@@ -11,11 +11,9 @@ from googleapiclient.errors import HttpError
 
 st.title("Weighsight")
 
-SERVICE_ACCOUNT_FILE = "service-account.json"
-
 def auth():
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=["https://www.googleapis.com/auth/calendar.events.readonly"])
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"], scopes=["https://www.googleapis.com/auth/calendar.events.readonly"])
     service = build("calendar", "v3", credentials=creds)
     return service
 
