@@ -5,7 +5,8 @@ import numpy as np
 import re
 import os
 import json
-import openai
+from openai import OpenAI
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -31,8 +32,8 @@ def get_events(service):
 
     return events_result.get('items', [])
 
+client = OpenAI(api_key=st.secrets["openai"]["OPENAI_API_KEY"])
 events = get_events(auth())
-# events
 formatted_dates = []
 formatted_weights = []
 
@@ -50,10 +51,10 @@ for e in events:
     result = re.match(r'^\d+(\.\d+)?\s*lbs$', weight)
     if not result:
         continue
-    
+
     weight = result.group(0)
-    
-    
+
+
     formatted_weights.append(weight)
     formatted_dates.append(date)
 
@@ -133,7 +134,7 @@ current_least_gain = 1000
 for i, delta in enumerate(month_weight_deltas):
     if delta < 0:
         continue
-    
+
     if delta == 0:
         month_least_gain = (i, delta)
         break
@@ -160,12 +161,12 @@ for i, delta in enumerate(month_weight_deltas):
 avg_monthly_rate = sum(month_weight_deltas) / len(month_weight_deltas)
 
 # feed this data into CGPT with a prompt to get concise insights and place in insights section
-st.header("Analysis 🔍")
 analysis_message = f"You weighed a **maximum** of {round(max_weight, 2)} lbs (week {max_week + 1}) and a **minimum** of {round(min_weight, 2)} lbs (week {min_week + 1})."
 analysis_message += f"\n\nYou **gained** the **most weight** in month {month_most_gain[0] + 1} of your journey ({round(month_most_gain[1], 2)} lbs)."
 analysis_message += f"\n\nYou **gained** the **least weight** in month {month_least_gain[0] + 1} of your journey ({round(month_least_gain[1], 2)} lbs)."
 analysis_message += f"\n\nYou **lost** the **most weight** in month {month_most_loss[0] + 1} of your journey ({round(abs(month_most_loss[1]), 2)} lbs)."
 analysis_message += f"\n\nYou **lost** the **least weight** in month {month_least_loss[0] + 1} of your journey ({round(abs(month_least_loss[1]), 2)} lbs)."
+
 for i, delta in enumerate(month_weight_deltas):
     if delta > 0:
         analysis_message += f"\n\nYou **gained** {round(delta, 2)} lbs in month {i + 1} of your journey."
@@ -175,8 +176,6 @@ if avg_monthly_rate > 0:
     analysis_message += f"\n\nOn **average**, you **gain** {round(avg_monthly_rate, 2)} lbs per month."
 else:
     analysis_message += f"\n\nOn **average**, you **lose** {round(abs(avg_monthly_rate), 2)} lbs per month."
-
-st.markdown(analysis_message)
 
 st.header("Insights 📝")
 INSIGHT_FILE = "insights_data.json"
@@ -190,24 +189,26 @@ def save_insight(week_index, insight_text):
     with open(INSIGHT_FILE, "w") as f:
         json.dump({"week": week_index, "insight": insight_text}, f)
 
-@st.cache_data(show_spinner="Thinking..")
 def gen_insight():
-    response = openai.ChatCompletion.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "system", "content": "You are a weight tracking assistant providing insightful feedback."},
-            {"role": "user", "content": "Based on the following user weight analysis, generate a short, motivational summary of their progress. Keep it specific and encouraging. Their weight goal is 140 lbs and they are a 6'2 male."}
-        ],
-        temperature=0.7
-    )
-    return response["choices"][0]["message"]["content"]
+    response = client.chat.completions.create(model="gpt-4.1-mini",
+    messages=[
+        {"role": "system", "content": "You are a personal weight-tracking coach. You provide short, motivational, and insightful feedback, pointing out meaningful patterns, plateaus, and progress trends."},
+        {"role": "user", "content": f"Here's the user's weight journey so far. Goal: 140 lbs. Height: 6'2 male. Analysis: {analysis_message}. Weekly Weights: {date_weight_pairs}. Please provide a specific, motivational insight. Mention positive habits if progress is good, or possible adjustments if growth has slowed. Be concise but thoughtful."}
+    ],
+    temperature=0.7)
+    return response.choices[0].message.content
 
 cached = load_cached_insight()
 current_week_index = len(weights)
 
 if current_week_index > cached["week"]:
-    gpt_output = gen_insight()
+    with st.spinner("Thinking..."):
+      gpt_output = gen_insight()
     save_insight(current_week_index, gpt_output)
     st.markdown(gpt_output)
 else:
     st.markdown(cached["insight"])
+st.markdown(f"**Progress: {round(weights[len(weights) - 1], 1)} / 140 lbs**")
+
+st.header("Analysis 🔍")
+st.markdown(analysis_message)
