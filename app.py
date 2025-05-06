@@ -1,29 +1,70 @@
+ignore me:
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
+import re
+import os
+import google.auth
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 st.title("Weighsight")
-# populate this via Google Calendar
-formatted_dates = [
-    "2025-01-01", "2025-01-08", "2025-01-15", "2025-01-22",
-    "2025-01-29", "2025-02-05", "2025-02-12", "2025-02-19",
-    "2025-02-26", "2025-03-05", "2025-03-12", "2025-03-19",
-    "2025-03-26", "2025-04-02", "2025-04-09", "2025-04-16",
-    "2025-04-23", "2025-04-30", "2025-05-07", "2025-05-14"
-]
-# populate this via Google Calendar
-formatted_weights = [
-    "120 lbs", "125 lbs", "120 lbs", "135 lbs",
-    "130 lbs", "128 lbs", "126 lbs", "129 lbs",
-    "127 lbs", "124 lbs", "123 lbs", "122 lbs",
-    "125 lbs", "121 lbs", "120 lbs", "119 lbs",
-    "118 lbs", "117 lbs", "116 lbs", "120 lbs"
-]
+
+SERVICE_ACCOUNT_FILE = "service-account.json"
+
+def auth():
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=["https://www.googleapis.com/auth/calendar.events.readonly"])
+    service = build("calendar", "v3", credentials=creds)
+    return service
+
+def get_events(service):
+    try:
+        events_result = service.events().list(
+            calendarId="asaadbinahmed@gmail.com", 
+            timeMin="2025-01-01T00:00:00Z",
+            maxResults=52, 
+            singleEvents=True,
+            orderBy="startTime",
+            q="Weigh In"
+            ).execute()
+    except HttpError as error:
+        print(f'An error occurred: {error}')
+
+    return events_result.get('items', [])
+
+events = get_events(auth())
+# events
+formatted_dates = []
+formatted_weights = []
+
+for e in events:
+    weight = e.get('description')
+    date = e.get('start')
+
+    if not weight or not date:
+        continue
+
+    date = date.get('date')
+    if not date:
+        continue
+
+    result = re.match(r'^\d+(\.\d+)?\s*lbs$', weight)
+    if not result:
+        continue
+    
+    weight = result.group(0)
+    
+    
+    formatted_weights.append(weight)
+    formatted_dates.append(date)
+
+
 weights = [float(w.replace("lbs", "").replace("kg", "").strip()) for w in formatted_weights]
 date_weight_pairs = list(zip(formatted_dates, weights)) # [week0=(date, weight), week1=(date, weight), ..., weekn=(date, weight)]
 weight_by_month = [date_weight_pairs[i:i+4] for i in range(0, len(date_weight_pairs), 4)] # [month0=[week0=(date, weight), week1=(date, weight), ..., week4(date, weight)]
-weight_by_month
 
 data = pd.DataFrame({
     "date": formatted_dates,
@@ -58,9 +99,6 @@ fig.update_layout(
     margin=dict(t=60, b=40, l=60, r=40)
 )
 
-# st.button("Connect your Google account", on_click=st.login)
-# st.button("Logout", on_click=st.logout)
-# st.write(st.user)
 st.plotly_chart(fig, use_container_width=True)
 # st.write(data)
 
@@ -83,7 +121,7 @@ for i, weight in enumerate(weights):
 # calculate each month's weight delta
 month_weight_deltas = [] # [month0=[week0=(date, weight), week1=(date, weight), ..., week4(date, weight)]
 for month in weight_by_month:
-    delta = month[3][1] - month[0][1]
+    delta = month[len(month) - 1][1] - month[0][1]
     month_weight_deltas.append(delta)
 
 # month with most weight gain
@@ -123,20 +161,20 @@ avg_monthly_rate = sum(month_weight_deltas) / len(month_weight_deltas)
 
 # feed this data into CGPT with a prompt to get concise insights and place in insights section
 st.header("Analysis 🔍")
-analysis_message = f"You weighed a **maximum** of {max_weight} lbs (week {max_week + 1}) and a **minimum** of {min_weight} lbs (week {min_week + 1})."
-analysis_message += f"\n\nYou **gained** the **most weight** in month {month_most_gain[0] + 1} of your journey ({month_most_gain[1]} lbs)."
-analysis_message += f"\n\nYou **gained** the **least weight** in month {month_least_gain[0] + 1} of your journey ({month_least_gain[1]} lbs)."
-analysis_message += f"\n\nYou **lost** the **most weight** in month {month_most_loss[0] + 1} of your journey ({abs(month_most_loss[1])} lbs)."
-analysis_message += f"\n\nYou **lost** the **least weight** in month {month_least_loss[0] + 1} of your journey ({abs(month_least_loss[1])} lbs)."
+analysis_message = f"You weighed a **maximum** of {round(max_weight, 2)} lbs (week {max_week + 1}) and a **minimum** of {round(min_weight, 2)} lbs (week {min_week + 1})."
+analysis_message += f"\n\nYou **gained** the **most weight** in month {month_most_gain[0] + 1} of your journey ({round(month_most_gain[1], 2)} lbs)."
+analysis_message += f"\n\nYou **gained** the **least weight** in month {month_least_gain[0] + 1} of your journey ({round(month_least_gain[1], 2)} lbs)."
+analysis_message += f"\n\nYou **lost** the **most weight** in month {month_most_loss[0] + 1} of your journey ({round(abs(month_most_loss[1]), 2)} lbs)."
+analysis_message += f"\n\nYou **lost** the **least weight** in month {month_least_loss[0] + 1} of your journey ({round(abs(month_least_loss[1]), 2)} lbs)."
 for i, delta in enumerate(month_weight_deltas):
     if delta > 0:
-        analysis_message += f"\n\nYou **gained** {delta} lbs in month {i + 1} of your journey."
+        analysis_message += f"\n\nYou **gained** {round(delta, 2)} lbs in month {i + 1} of your journey."
     else:
-        analysis_message += f"\n\nYou **lost** {abs(delta)} lbs in month {i + 1} of your journey."
+        analysis_message += f"\n\nYou **lost** {round(abs(delta), 2)} lbs in month {i + 1} of your journey."
 if avg_monthly_rate > 0:
-    analysis_message += f"\n\nOn **average**, you **gain** {avg_monthly_rate} lbs per month."
+    analysis_message += f"\n\nOn **average**, you **gain** {round(avg_monthly_rate, 2)} lbs per month."
 else:
-    analysis_message += f"\n\nOn **average**, you **lose** {abs(avg_monthly_rate)} lbs per month."
+    analysis_message += f"\n\nOn **average**, you **lose** {round(abs(avg_monthly_rate), 2)} lbs per month."
 
 st.markdown(analysis_message)
 
