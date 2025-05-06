@@ -1,77 +1,121 @@
 # 🏋️‍♂️ Weighsight
-**A smart, calendar-integrated weight-tracking webapp** that connects to your Google Calendar to automatically extract weight data, visualize weekly trends, and generate actionable insights using data analysis and forecasting.
 
-## 🚀 Features & Architecture
-
-### 🔐 User Authentication & Account Linking
-- Implements **OAuth 2.0** to securely connect and authorize access to the user's Google Calendar.
-- Future support for **iCloud Calendar** via **CalDAV** with app-specific passwords.
-- Authentication state determines app flow and calendar data access.
+**Weighsight** is a personal, intelligent weight-tracking dashboard that integrates with Google Calendar to analyze your weigh-in events, visualize trends, and generate tailored insights powered by GPT.
 
 ---
 
-### 🎯 User Onboarding & Goal Initialization
-- On first launch, prompts user to input a **target goal weight**.
-- Stores the goal locally for use in progress tracking and predictive analysis.
+## 🔧 What It Does
 
----
+### 📅 Calendar-Integrated Weight Tracking
 
-### 📅 Calendar Data Extraction
-- Queries events from the user’s calendar from **January 1, 2025 to present**.
-- Filters for events titled **"Weigh In"**.
-- Extracts and parses weight values from the event **notes** using regex (e.g., `"187.4 lbs"`).
-- Formats valid data into structured tuples:  
-  `[(date, weight)]`.
+- Automatically pulls events titled **"Weigh In"** from your Google Calendar.
+- Extracts weight entries from the event description (e.g., `"187.4 lbs"`).
+- Filters and cleans data for consistency.
 
----
+### 📊 Weekly Trend Visualization
 
-### 📊 Data Visualization
-- Interactive **Week vs Weight** graph powered by **Plotly** or **Matplotlib**.
-- Weeks based on **ISO calendar week** (`Jan 1 = Week 1`, `Jan 8 = Week 2`, etc.).
-- Tooltips display exact dates and weight entries on hover.
-- Skips points with missing or invalid weight data for clean plotting.
+- Displays an interactive **Week vs Weight** line chart using **Plotly**.
+- Hover over data points to reveal exact dates and weights.
+- Color-coded, smooth visual with fill for clarity of progress.
 
----
+### 📈 Monthly Progress Analytics
 
-### 📈 Statistical Analysis Engine
+- Aggregates weigh-ins into monthly chunks (4-week blocks).
 - Calculates:
-  - **Monthly weight change** (gain/loss).
-  - **Average rate of change per week**.
-- Applies **linear regression** to assess user trend and rate of progress.
-- Highlights periods of stagnation, acceleration, or reversal.
+  - Weight gained or lost each month.
+  - Periods of highest gain/loss.
+  - Average monthly rate of change.
+- Highlights milestones such as **min/max weight** and their corresponding weeks.
+
+### 🧠 AI-Driven Insight Generation
+
+- Leverages **GPT-4.1-mini** to provide short, motivational insights based on your progress.
+- Observes patterns and suggests either reinforcement or adjustment.
+- Caches insights to avoid repeat computation and speed up loading.
 
 ---
 
-### 🤖 Forecasting & Insight Generation
-- Projects weight for the next **4 weeks** based on trendline.
-- Evaluates proximity to **goal weight** and estimated time to reach it.
-- Optional **GPT-based interpretation layer** that converts raw metrics into natural language suggestions:
-  - Example: *“You’re on pace to hit your goal in 6 weeks. Stay consistent or reduce by 200 kcal/day to accelerate.”*
+## 📦 Tech Stack
+
+- **UI Framework**: [Streamlit](https://streamlit.io/)
+- **Visualization**: [Plotly](https://plotly.com/)
+- **Data Analysis**: `pandas`, `numpy`, `re`
+- **Calendar Integration**: Google Calendar API (via `google-api-python-client`)
+- **AI Insight**: OpenAI GPT (via `openai` Python SDK)
+- **Credential Handling**: Service Account authentication via `google.oauth2`
 
 ---
 
-## 🛠️ Stack
-- **Frontend/UI**: Streamlit (for rapid prototyping and interactivity)
-- **Backend**: Python
-- **Data**: Google Calendar API, CalDAV (iCloud)
-- **Visualization**: Plotly, Matplotlib
-- **Analysis**: NumPy, Pandas, scikit-learn
-- **AI Integration**: OpenAI GPT API (optional)
+## 🧪 How It Works (Under the Hood)
+
+1. **Authenticate Calendar Access**
+
+   - Uses a **service account** to fetch events with title matching `"Weigh In"`.
+
+2. **Extract & Format Data**
+
+   - Validates weights using regex (`\d+(\.\d+)?\s*lbs`).
+   - Associates each weight with a calendar week and aggregates by month.
+
+3. **Plot Data**
+
+   - Plots weekly data using smooth splines and styled tooltips.
+
+4. **Run Analysis**
+
+   - Finds:
+     - Heaviest & lightest weeks
+     - Monthly changes (gains/losses)
+     - Average trends
+
+5. **Generate GPT Insight**
+   - Sends a structured message to OpenAI with your full data + analysis.
+   - Displays a motivational, insightful message that updates with each new weigh-in.
 
 ---
 
-## 📦 Roadmap
-- [ ] Support for iCloud Calendar via CalDAV
-- [ ] Persistent user sessions & login
-- [ ] Exportable progress reports (PDF/CSV)
-- [ ] Mobile-responsive layout
-- [ ] OAuth scope refinement and deployment
+## 🧠 Example Insight
+
+> "You've consistently lost weight over the last 2 months—great job! If you keep this pace, you’re on track to hit your 140 lbs goal. Keep your weigh-in habit regular—it’s clearly working."
 
 ---
 
-## 📸 Screenshots (Coming Soon)
+## 🚀 Running the App
 
----
+To run locally:
 
-## 📬 Contact
-Feel free to reach out if you'd like to collaborate or have feedback on the app!
+```bash
+pip install streamlit openai google-api-python-client google-auth pandas plotly
+streamlit run app.py
+```
+
+You’ll need a secrets.toml (.streamlit/secrets.toml) with:
+
+```toml
+[gcp_service_account]
+# Your Google Cloud service account credentials here
+
+[openai]
+OPENAI_API_KEY = "your-openai-key"
+```
+
+⸻
+
+🎯 Goal & Progress Tracking
+
+- Target weight is hardcoded to 140 lbs, but you can easily tweak this value as needed.
+- Progress updates dynamically each week, as long as you are consistent with loggin.
+- Visual and textual feedback reinforce momentum and help adjust when needed.
+
+⸻
+
+📁 Files Used
+
+- app.py – Main Streamlit script
+- insights_data.json – Cache for last generated GPT insight (necessary to prevent waste of precious tokens)
+
+⸻
+
+📝 Notes
+
+This is a private, personal-use web app designed for a single user, with no login, account management, or multi-user support. However, it is easily configurable and plug-and-play if you would like to use it.
