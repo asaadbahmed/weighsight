@@ -4,12 +4,11 @@ import plotly.graph_objects as go
 import numpy as np
 import re
 import os
-import google.auth
+import json
+import openai
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
-st.title("Weighsight")
 
 def auth():
     creds = service_account.Credentials.from_service_account_info(
@@ -58,7 +57,6 @@ for e in events:
     formatted_weights.append(weight)
     formatted_dates.append(date)
 
-
 weights = [float(w.replace("lbs", "").replace("kg", "").strip()) for w in formatted_weights]
 date_weight_pairs = list(zip(formatted_dates, weights)) # [week0=(date, weight), week1=(date, weight), ..., weekn=(date, weight)]
 weight_by_month = [date_weight_pairs[i:i+4] for i in range(0, len(date_weight_pairs), 4)] # [month0=[week0=(date, weight), week1=(date, weight), ..., week4(date, weight)]
@@ -97,6 +95,7 @@ fig.update_layout(
     margin=dict(t=60, b=40, l=60, r=40),
 )
 
+st.title("Weighsight")
 st.plotly_chart(fig, use_container_width=True, config={
     "scrollZoom": False,
     "displayModeBar": False
@@ -180,3 +179,35 @@ else:
 st.markdown(analysis_message)
 
 st.header("Insights 📝")
+INSIGHT_FILE = "insights_data.json"
+def load_cached_insight():
+    if os.path.exists(INSIGHT_FILE):
+        with open(INSIGHT_FILE, "r") as f:
+            return json.load(f)
+    return {"week": -1, "insight": ""}
+
+def save_insight(week_index, insight_text):
+    with open(INSIGHT_FILE, "w") as f:
+        json.dump({"week": week_index, "insight": insight_text}, f)
+
+@st.cache_data(show_spinner="Thinking..")
+def gen_insight():
+    response = openai.ChatCompletion.create(
+        model="gpt-4.1-mini",
+        messages=[
+            {"role": "system", "content": "You are a weight tracking assistant providing insightful feedback."},
+            {"role": "user", "content": "Based on the following user weight analysis, generate a short, motivational summary of their progress. Keep it specific and encouraging. Their weight goal is 140 lbs and they are a 6'2 male."}
+        ],
+        temperature=0.7
+    )
+    return response["choices"][0]["message"]["content"]
+
+cached = load_cached_insight()
+current_week_index = len(weights)
+
+if current_week_index > cached["week"]:
+    gpt_output = gen_insight()
+    save_insight(current_week_index, gpt_output)
+    st.markdown(gpt_output)
+else:
+    st.markdown(cached["insight"])
