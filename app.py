@@ -72,7 +72,8 @@ data = pd.DataFrame({
 trace = go.Scatter(
     x=data["week"],
     y=data["weight"],
-    mode="lines",
+    mode="lines+markers",
+    marker=dict(size=6, color="#00ff00"),
     line=dict(color="#00ff00", width=3, shape="spline"),    
     fill="tozeroy",
     fillcolor="rgba(30, 215, 96, 0.15)",
@@ -90,13 +91,16 @@ fig.update_layout(
     font=dict(family="Helvetica", size=14, color="white"),
     xaxis_title="<b>Week</b>",
     yaxis_title="<b>Weight (lbs)</b>",
-    xaxis=dict(showspikes=False, color="white", showgrid=False),
-    yaxis=dict(showspikes=False, gridcolor="#333", color="white", showgrid=False, autorange=True),
+    xaxis=dict(showspikes=False, color="white", showgrid=False, fixedrange=True),
+    yaxis=dict(showspikes=False, gridcolor="#333", color="white", showgrid=False, autorange=True, fixedrange=True),
     hovermode="x unified",
-    margin=dict(t=60, b=40, l=60, r=40)
+    margin=dict(t=60, b=40, l=60, r=40),
 )
 
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True, config={
+    "scrollZoom": False,
+    "displayModeBar": False
+})
 # st.write(data)
 
 # find min & max weights along with the date
